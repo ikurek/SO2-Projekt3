@@ -9,11 +9,20 @@ class Statistics {
 
 public:
 
-    static const int startingPopulationSize = 10;
-    static const int ageLimit = 100;
-    static const int populationYearInMillis = 1000;
-    static const int refreshTimeForUIInMilis = 1000;
-
+    // Size of population to begin with
+    static const unsigned int startingPopulationSize = 10;
+    // Maximum age of a person (years)
+    static const unsigned int ageLimit = 100;
+    // Rate of birth for each year (percent)
+    static const unsigned int birthRatioInYearPercent = 1;
+    // Maximum age to have a child (years)
+    static const unsigned int birthMaximumAge = 45;
+    // Minimum age to have a child (years)
+    static const unsigned int birthMinimumAge = 15;
+    // Chance of an accident happening to person (percent)
+    static const unsigned int accidentRatioInPercent = 10;
+    // Maximum number of children a person can have
+    static const unsigned int maxChildrenForPerson = 3;
 };
 
 
