@@ -5,18 +5,18 @@
 
 using namespace std;
 
-class Statistics {
+class Statistics
+{
 
-public:
-
+  public:
     // Size of population to begin with
-    static const unsigned int startingPopulationSize = 10;
+    static const unsigned int startingPopulationSize = 15;
     // Maximum age of a person (years)
     static const unsigned int ageLimit = 100;
     // Rate of birth for each year (percent)
-    static const unsigned int birthRatioInYearPercent = 1;
+    static const unsigned int birthRatioInYearPercent = 5;
     // Maximum age to have a child (years)
-    static const unsigned int birthMaximumAge = 45;
+    static const unsigned int birthMaximumAge = 50;
     // Minimum age to have a child (years)
     static const unsigned int birthMinimumAge = 15;
     // Chance of an accident happening to person (percent)
@@ -24,6 +24,5 @@ public:
     // Maximum number of children a person can have
     static const unsigned int maxChildrenForPerson = 3;
 };
-
 
 #endif //SO2_PROJEKT3_STATISTICS_H

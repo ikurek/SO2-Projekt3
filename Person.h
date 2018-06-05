@@ -1,15 +1,12 @@
-#ifndef SO2_PROJEKT3_PERSONTHREAD_H
-#define SO2_PROJEKT3_PERSONTHREAD_H
-
-#include <iostream>
 #include <thread>
 #include <vector>
 
 using namespace std;
 
-class Person {
+class Person
+{
 
-public:
+  public:
     unsigned long age;
     unsigned long lifeExpectancy;
     unsigned long children;
@@ -28,8 +25,5 @@ public:
 
     bool canHaveChild();
 
-private:
+  private:
 };
-
-
-#endif //SO2_PROJEKT3_PERSONTHREAD_H

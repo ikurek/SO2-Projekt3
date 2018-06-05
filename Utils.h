@@ -6,12 +6,12 @@
 
 using namespace std;
 
-class Utils {
-public:
+class Utils
+{
+  public:
     static int randomInRange(int start, int end);
 
     static int randomCoinFlip(int heads, int tails);
 };
-
 
 #endif //SO2_PROJEKT3_UTLIS_H
