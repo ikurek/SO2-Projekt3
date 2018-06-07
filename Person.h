@@ -1,3 +1,5 @@
+#pragma once
+
 #include <thread>
 #include <vector>
 
@@ -7,9 +9,9 @@ class Person
 {
 
   public:
-    unsigned long age;
-    unsigned long lifeExpectancy;
-    unsigned long children;
+    int age;
+    int lifeExpectancy;
+    int children;
     bool gender;
     bool alive;
 

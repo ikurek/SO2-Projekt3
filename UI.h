@@ -1,6 +1,9 @@
 #include <iostream>
 #include <random>
 #include <ncurses.h>
+#include "Person.h"
+#include "Statistics.h"
+
 
 using namespace std;
 
@@ -14,9 +17,9 @@ class UI
     void getConsoleSize();
     void printStaticUI();
     void refreshDisplay();
-    void printPerson(int, int, int, bool, unsigned long, unsigned long);
-    void printPersonDeath(int, int, int, bool, unsigned long, unsigned long);
-    void printYear(int);
+    void printPerson(int, Person);
+    void printPersonDeath(int, Person);
+    void printInfo();
     void endCurses();
 
   private:

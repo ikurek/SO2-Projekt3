@@ -48,75 +48,70 @@ void UI::refreshDisplay()
         mtx.unlock();
 }
 
-void UI::printPerson(int id, int age, int maxAge, bool gender, unsigned long children, unsigned long lifeExpectancy)
+void UI::printPerson(int id, Person person)
 {
         mtx.lock();
         attron(COLOR_PAIR(2));
         mvprintw(id + 2, 0, "[");
-        if (children > 3)
-                children = 3;
-        if (age > lifeExpectancy)
-                age = lifeExpectancy;
+        if (person.children > 3)
+                person.children = 3;
+        if (person.age > person.lifeExpectancy)
+                person.age = person.lifeExpectancy;
 
-        if (gender)
+        if (person.gender)
         {
-                mvprintw(id + 2, maxAge, "] Gender: Male,   Children: %d, Age: %3d", children, age);
+                mvprintw(id + 2, Statistics::ageLimit, "] Gender: Male,    Children: %d,  Age: %3d", person.children, person.age);
         }
         else
         {
-                mvprintw(id + 2, maxAge, "] Gender: Female, Children: %d, Age: %3d", children, age);
+                mvprintw(id + 2, Statistics::ageLimit, "] Gender: Female,  Children: %d,  Age: %3d", person.children, person.age);
         }
-        mvprintw(id + 2, age - 1, " ");
-        mvprintw(id + 2, age, "#");
+        mvprintw(id + 2, person.age - 1, " ");
+        mvprintw(id + 2, person.age, "#");
         mtx.unlock();
 }
 
-void UI::printPersonDeath(int id, int age, int maxAge, bool gender, unsigned long children, unsigned long lifeExpectancy)
+void UI::printPersonDeath(int id, Person person)
 {
         mtx.lock();
         string deathCause;
 
-        if (lifeExpectancy == age)
+        if (person.lifeExpectancy >= person.age)
         {
-                deathCause = "natural";
+                deathCause = "natural,  ";
                 attron(COLOR_PAIR(1));
                 
         }
         else
         {
-                deathCause = "accident";
+                deathCause = "accident, ";
                 attron(COLOR_PAIR(3));
         }
-
-        if (children > 3)
-                children = 3;
-        if (age > lifeExpectancy)
-                age = lifeExpectancy;
         
         mvprintw(id + 2, 0, "[");
 
-        if (gender)
+        if (person.gender)
         {
-                mvprintw(id + 2, maxAge, "] Gender: Male,   Children: %d, Age: %3d, Death: %s", children, age, deathCause.c_str());
+                mvprintw(id + 2, Statistics::ageLimit, "] Death: %s", deathCause.c_str());
         }
         else
         {
-                mvprintw(id + 2, maxAge, "] Gender: Female, Children: %d, Age: %3d, Death: %s", children, age, deathCause.c_str());
+                mvprintw(id + 2, Statistics::ageLimit, "] Death: %s", deathCause.c_str());
         }
-        mvprintw(id + 2, age - 1, " ");
-        mvprintw(id + 2, age, "#");
+        mvprintw(id + 2, person.age - 1, " ");
+        mvprintw(id + 2, person.age, "#");
         mtx.unlock();
 }
 
-void UI::printYear(int year)
+void UI::printInfo()
 {
         mtx.lock();
-        mvprintw(0, 0, "Year: %d");
+        attron(COLOR_PAIR(4) | A_BOLD);
+        mvprintw(0, 0, "Starting population: %d || Birth ratio: %d%% || Birth age: %d - %d || Accident ratio: %d%% || Max children: %d", Statistics::startingPopulationSize, Statistics::birthRatioInYearPercent, Statistics::birthMinimumAge, Statistics::birthMaximumAge, Statistics::accidentRatioInPercent, Statistics::maxChildrenForPerson);
         mtx.unlock();
 }
 
 void UI::endCurses()
 {
-        getch();
         endwin();
 }
