@@ -20,7 +20,7 @@ class Statistics
     // Minimum age to have a child (years)
     static const int birthMinimumAge = 15;
     // Chance of an accident happening to person (percent)
-    static const int accidentRatioInPercent = 1;
+    static const int accidentRatioInPercent = 10;
     // Maximum number of children a person can have
     static const int maxChildrenForPerson = 3;
 };

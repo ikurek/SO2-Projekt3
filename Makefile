@@ -8,3 +8,7 @@ clean:
 	-rm -f main
 	-rm -f *.gch
 	-rm -rf *.dSYM
+
+run:
+	./main
+	clear

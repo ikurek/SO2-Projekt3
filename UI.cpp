@@ -66,6 +66,7 @@ void UI::printPerson(int id, Person person)
         {
                 mvprintw(id + 2, Statistics::ageLimit, "] Gender: Female,  Children: %d,  Age: %3d", person.children, person.age);
         }
+        attron(COLOR_PAIR(7));
         mvprintw(id + 2, person.age - 1, " ");
         mvprintw(id + 2, person.age, "#");
         mtx.unlock();
@@ -76,7 +77,7 @@ void UI::printPersonDeath(int id, Person person)
         mtx.lock();
         string deathCause;
 
-        if (person.lifeExpectancy >= person.age)
+        if (person.lifeExpectancy == person.age)
         {
                 deathCause = "natural,  ";
                 attron(COLOR_PAIR(1));
@@ -98,8 +99,6 @@ void UI::printPersonDeath(int id, Person person)
         {
                 mvprintw(id + 2, Statistics::ageLimit, "] Death: %s", deathCause.c_str());
         }
-        mvprintw(id + 2, person.age - 1, " ");
-        mvprintw(id + 2, person.age, "#");
         mtx.unlock();
 }
 
