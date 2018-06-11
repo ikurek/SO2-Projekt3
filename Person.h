@@ -9,6 +9,7 @@ class Person
 {
 
   public:
+    long id;
     int age;
     int lifeExpectancy;
     int children;

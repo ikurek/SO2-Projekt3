@@ -23,7 +23,6 @@ class UI
     void endCurses();
 
   private:
-    mutex mtx;
     unsigned int consoleX;
     unsigned int consoleY;
 };

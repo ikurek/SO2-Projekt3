@@ -14,45 +14,49 @@ using namespace std;
 // Single instance of UI object
 UI ui;
 
+// Mutex to synchronize UI operations
+mutex ui_mutex;
+
 // Synchronizing operations on population
 mutex population_mutex;
 condition_variable population_cv;
 
+// Vectors to store threads and person objects
 vector<Person> population;
 vector<thread> threads;
 
-// Returns a number of alive person objects in population
-int calculateAlivePersons()
-{
-    int alive = 0;
-
-    for (int i = 0; i < population.size() - 1; ++i)
-    {
-        if (population[i].alive)
-            alive++;
-    }
-
-    return alive;
-}
+// Holding ammount of people alive
+// Starting is 1, chence 0 stops program
+int alive = 1;
 
 // Thread represents a single person inside a population
 void personThread(Person &person, int personNumber)
 {
-    
+    // Increase counter for alive people
+    alive++;
+
+    // Wait until NCurses library is initialized
     while (!ui.isCursesInitialized)
     {
         this_thread::sleep_for(chrono::milliseconds(100));
     }
-    
 
-    // Represents a lifespan of person
+    // Iterate as long, as person is alive
     while (person.alive)
     {
+        // Lock mutex for UI
+        ui_mutex.lock();
 
+        // Print current state of person
         ui.printPerson(personNumber, person);
 
-        this_thread::sleep_for(chrono::milliseconds(972));
+        // Free UI
+        ui_mutex.unlock();
 
+        // Sleep for one second
+        this_thread::sleep_for(chrono::milliseconds(1000));
+
+        // Increase age of person in this thread
         person.increaseAge();
 
         // Kill if age is higher then expected
@@ -60,31 +64,37 @@ void personThread(Person &person, int personNumber)
         {
             person.kill();
         }
-
-        // Check for specified accident probability
-        if (Utils::randomInRange(0, 1000) <= Statistics::accidentRatioInPercent)
-        {
-            // If matched, find element alive
-            // And kill it
-            person.kill();
-        }
     }
 
+    // Lock UI mutex
+    ui_mutex.lock();
+
+    // Print death sentence for person
     ui.printPersonDeath(personNumber, person);
-    this_thread::sleep_for(chrono::milliseconds(1000));
+
+    // Free UI
+    ui_mutex.unlock();
+
+    // Decrease number of people alive
+    alive--;
+
+    // Wait for a while before stopping thread
+    this_thread::sleep_for(chrono::milliseconds(100));
 }
 
-// Locks population_mutex
-// Acquires unique lock on population_cv
-// Adds person object to population
-// Returns index of newely added object
+
+// Method creates a new person object
+// With initial data set to child
+// Needs to be called from critical section
+// Inside mutex/cv lock
 void addToPopulation()
 {
-
+    // Create new person with initial data
     Person person = Person();
     person.initBeginning();
-
+    // Add person to vector
     population.emplace_back(person);
+    // Start thread for newly created person
     threads.emplace_back(thread(personThread, ref(population[population.size() - 1]), population.size() - 1));
 }
 
@@ -94,18 +104,18 @@ void populationThread()
 {
 
     // Lasts till there are people alive
-    while (calculateAlivePersons() > 0)
+    while (alive > 0)
     {
-
-        // Sleep thread for 1,5s
-        this_thread::sleep_for(chrono::milliseconds(1973));
+        // Sleep thread for 2s
+        this_thread::sleep_for(chrono::milliseconds(2000));
 
         // Save population size in current state
         unsigned long currentPopulationSize = population.size() - 1;
 
-        // Iterate over all population elements to cause childbirth
-        // FIXME: Matches elements wrong
+        // Acquire unique lock on population mutex
         unique_lock<mutex> lck(population_mutex);
+
+        // Iterate over all population elements to cause childbirth
         for (int i = 0; i < currentPopulationSize; ++i)
         {
             for (int j = 0; j < currentPopulationSize; ++j)
@@ -130,56 +140,112 @@ void populationThread()
                 }
             }
         }
+
+        // Check for specified accident probability
+        if (Utils::randomInRange(0, 100) <= Statistics::accidentRatioInPercent)
+        {
+            // If matched, find element alive
+            // And kill it
+            int random = Utils::randomInRange(0, population.size() - 1);
+            population[random].kill();
+        }
+
+        // Release lock
         lck.unlock();
+        // Notify waiting
         population_cv.notify_all();
+
+        // If thread caused last person to die
+        // Mark population as dead
+        if (alive == 1)
+        {
+            alive = 0;
+        }
     }
 
-    this_thread::sleep_for(chrono::milliseconds(1000));
+    this_thread::sleep_for(chrono::milliseconds(100));
 }
 
 // Thread handles UI and Log printing
 void uiThread()
 {
-    // Create UI object
+    // Acquire lock on UI
+    ui_mutex.lock();
+
+    // Initialize NCurses
     ui.initUI();
+
+    // Print information about population
     ui.printInfo();
 
+    // Release UI
+    ui_mutex.unlock();
+
     // Works till there are people alive
-    while (calculateAlivePersons() > 0)
-    {        
+    while (alive > 0)
+    {
+        // Acquire UI lock
+        ui_mutex.lock();
+        
+        // Refresh NCurses
         ui.refreshDisplay();
-        // Wait for some time
-        this_thread::sleep_for(chrono::milliseconds(200));
-        // Go to next year
+
+        // Release lock
+        ui_mutex.unlock();
+
+        // Sleep for one second
+        this_thread::sleep_for(chrono::milliseconds(1000));
     }
 
+    // Lock UI
+    ui_mutex.lock();
+
+    // Finalize Curses
     ui.endCurses();
-    this_thread::sleep_for(chrono::milliseconds(1000));
+
+    // Unlock UI
+    ui_mutex.unlock();
+
+    // Wait for some time before finishing thread
+    this_thread::sleep_for(chrono::milliseconds(100));
 }
 
 // Clear some stuff before finishing
 void finallize()
 {
-    population.clear();
 
+    // Wait for threads to finish execution
+    for (auto &thread : threads)
+    {
+        thread.join();
+    }
+
+    // Clear vectors
+    population.clear();
     threads.clear();
 }
 
+// Entry point
 int main()
 {
-
     // Create starting population
     for (int i = 0; i < Statistics::startingPopulationSize; ++i)
     {
+        // Create new person
         Person person = Person();
+
+        // Initialize person with random data
         person.initRandom();
+
+        // Place person inside population
         population.emplace_back(person);
     }
 
     // Start thread for each person in population
     for (int j = 0; j < population.size(); ++j)
     {
-        threads.emplace_back(thread(personThread, ref(population[j]), j));
+        // Start thread and place it into vector
+        threads.emplace_back(personThread, ref(population[j]), j);
     }
 
     // Start thread that causes population events
@@ -187,8 +253,10 @@ int main()
 
     // Start and join thread that controlls UI
     thread uiT = thread(uiThread);
-    uiT.join();
+    
+    // Join threads
     populationT.join();
+    uiT.join();
 
     finallize();
     return 0;

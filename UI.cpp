@@ -2,6 +2,7 @@
 
 using namespace std;
 
+// Initializes NCurses to ready-to-work state
 void UI::initUI()
 {
         this->initCurses();
@@ -10,14 +11,23 @@ void UI::initUI()
         this->isCursesInitialized = true;
 }
 
+// Starting parameters for NCurses
 void UI::initCurses()
 {
+        // Initialize Curses display
         initscr();
+
+        // Enable scrolling
         scrollok(stdscr, TRUE);
+
+        // Enable colours
         start_color();
+
+        // Hide cursour
         curs_set(0);
 }
 
+// initializez colour pairs for NCurses
 void UI::initCursesColours()
 {
         init_pair(1, COLOR_RED, COLOR_BLACK);
@@ -30,6 +40,7 @@ void UI::initCursesColours()
         init_pair(8, COLOR_BLACK, COLOR_WHITE);
 }
 
+// Reads size of console
 void UI::getConsoleSize()
 {
         unsigned int x, y;
@@ -42,15 +53,13 @@ void UI::getConsoleSize()
 // Repaints content of terminal
 void UI::refreshDisplay()
 {
-        // Lock mutex and refresh curses
-        mtx.lock();
         refresh();
-        mtx.unlock();
 }
 
+// Prints a single row of person information
 void UI::printPerson(int id, Person person)
 {
-        mtx.lock();
+
         attron(COLOR_PAIR(2));
         mvprintw(id + 2, 0, "[");
         if (person.children > 3)
@@ -69,12 +78,11 @@ void UI::printPerson(int id, Person person)
         attron(COLOR_PAIR(7));
         mvprintw(id + 2, person.age - 1, " ");
         mvprintw(id + 2, person.age, "#");
-        mtx.unlock();
 }
 
+// Print person info after death
 void UI::printPersonDeath(int id, Person person)
 {
-        mtx.lock();
         string deathCause;
 
         if (person.lifeExpectancy == person.age)
@@ -93,21 +101,19 @@ void UI::printPersonDeath(int id, Person person)
 
         if (person.gender)
         {
-                mvprintw(id + 2, Statistics::ageLimit, "] Death: %s", deathCause.c_str());
+                mvprintw(id + 2, Statistics::ageLimit, "] Death: %s                                 ", deathCause.c_str());
         }
         else
         {
-                mvprintw(id + 2, Statistics::ageLimit, "] Death: %s", deathCause.c_str());
+                mvprintw(id + 2, Statistics::ageLimit, "] Death: %s                                 ", deathCause.c_str());
         }
-        mtx.unlock();
 }
 
+// Print top bar with infos
 void UI::printInfo()
 {
-        mtx.lock();
         attron(COLOR_PAIR(4) | A_BOLD);
         mvprintw(0, 0, "Starting population: %d || Birth ratio: %d%% || Birth age: %d - %d || Accident ratio: %d%% || Max children: %d", Statistics::startingPopulationSize, Statistics::birthRatioInYearPercent, Statistics::birthMinimumAge, Statistics::birthMaximumAge, Statistics::accidentRatioInPercent, Statistics::maxChildrenForPerson);
-        mtx.unlock();
 }
 
 void UI::endCurses()
