@@ -1,263 +1,117 @@
-#include <iostream>
-#include <vector>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <string>
-#include "Statistics.h"
-#include "Utils.h"
-#include "Person.h"
-#include "UI.h"
+from interface import Interface
+from person import Person
+import random
+import threading
+import time
+import stats
 
-using namespace std;
-
-// Single instance of UI object
-UI ui;
-
-// Mutex to synchronize UI operations
-mutex ui_mutex;
-
-// Synchronizing operations on population
-mutex population_mutex;
-condition_variable population_cv;
-
-// Vectors to store threads and person objects
-vector<Person> population;
-vector<thread> threads;
-
-// Holding ammount of people alive
-// Starting is 1, chence 0 stops program
-int alive = 1;
-
-// Thread represents a single person inside a population
-void personThread(Person &person, int personNumber)
-{
-    // Increase counter for alive people
-    alive++;
-
-    // Wait until NCurses library is initialized
-    while (!ui.isCursesInitialized)
-    {
-        this_thread::sleep_for(chrono::milliseconds(100));
-    }
-
-    // Iterate as long, as person is alive
-    while (person.alive)
-    {
-        // Lock mutex for UI
-        ui_mutex.lock();
-
-        // Print current state of person
-        ui.printPerson(personNumber, person);
-
-        // Free UI
-        ui_mutex.unlock();
-
-        // Sleep for one second
-        this_thread::sleep_for(chrono::milliseconds(1000));
-
-        // Increase age of person in this thread
-        person.increaseAge();
-
-        // Kill if age is higher then expected
-        if (person.age >= person.lifeExpectancy)
-        {
-            person.kill();
-        }
-    }
-
-    // Lock UI mutex
-    ui_mutex.lock();
-
-    // Print death sentence for person
-    ui.printPersonDeath(personNumber, person);
-
-    // Free UI
-    ui_mutex.unlock();
-
-    // Decrease number of people alive
-    alive--;
-
-    // Wait for a while before stopping thread
-    this_thread::sleep_for(chrono::milliseconds(100));
-}
+interface_lock = threading.Lock()
+population_lock = threading.Lock()
+alive = 0
+interface = Interface()
+interface.init_interface()
+population = list()
+threads = list()
 
 
-// Method creates a new person object
-// With initial data set to child
-// Needs to be called from critical section
-// Inside mutex/cv lock
-void addToPopulation()
-{
-    // Create new person with initial data
-    Person person = Person();
-    person.initBeginning();
-    // Add person to vector
-    population.emplace_back(person);
-    // Start thread for newly created person
-    threads.emplace_back(thread(personThread, ref(population[population.size() - 1]), population.size() - 1));
-}
+def person_thread(person, person_number):
+    global alive
+    alive += 1
 
-// Thread performs operations on a whole population
-// Causes childbirth, accidents, etc.
-void populationThread()
-{
+    while not interface.is_curses_initialized:
+        time.sleep(.1)
 
-    // Lasts till there are people alive
-    while (alive > 0)
-    {
-        // Sleep thread for 2s
-        this_thread::sleep_for(chrono::milliseconds(2000));
+    while person.alive:
+        with interface_lock:
+            interface.print_person(person_number, person)
 
-        // Save population size in current state
-        unsigned long currentPopulationSize = population.size() - 1;
+        time.sleep(1)
+        person.increase_age()
 
-        // Acquire unique lock on population mutex
-        unique_lock<mutex> lck(population_mutex);
+        if person.age >= person.life_expectancy:
+            person.kill()
 
-        // Iterate over all population elements to cause childbirth
-        for (int i = 0; i < currentPopulationSize; ++i)
-        {
-            for (int j = 0; j < currentPopulationSize; ++j)
-            {
-                // Check if given people have different gendes
-                if (population[i].gender != population[j].gender)
-                {
-                    // Check if they can have children
-                    if (population[i].canHaveChild() && population[j].canHaveChild())
-                    {
-                        // Check with specified distribution
-                        if (Utils::randomInRange(0, 100) < Statistics::birthRatioInYearPercent)
-                        {
-                            // Create new population element (child)
-                            // If checks succeeded
-                            population[i].children++;
-                            population[j].children++;
-                            addToPopulation();
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+    with interface_lock:
+        interface.print_person_death(person_number, person)
 
-        // Check for specified accident probability
-        if (Utils::randomInRange(0, 100) <= Statistics::accidentRatioInPercent)
-        {
-            // If matched, find element alive
-            // And kill it
-            int random = Utils::randomInRange(0, population.size() - 1);
-            population[random].kill();
-        }
+    alive -= 1
+    time.sleep(.1)
 
-        // Release lock
-        lck.unlock();
-        // Notify waiting
-        population_cv.notify_all();
 
-        // If thread caused last person to die
-        // Mark population as dead
-        if (alive == 1)
-        {
-            alive = 0;
-        }
-    }
+def add_to_population():
+    person = Person()
+    person.init_child()
+    population.append(person)
+    t = threading.Thread(target=person_thread, args=[
+                         person, len(population) - 1])
+    t.start()
+    threads.append(t)
 
-    this_thread::sleep_for(chrono::milliseconds(100));
-}
 
-// Thread handles UI and Log printing
-void uiThread()
-{
-    // Acquire lock on UI
-    ui_mutex.lock();
+def interface_thread():
+    with interface_lock:
+        interface.init_interface()
+        interface.print_info()
 
-    // Initialize NCurses
-    ui.initUI();
+    global alive
+    while alive > 0:
+        with interface_lock:
+            interface.refresh_display()
+        time.sleep(1)
 
-    // Print information about population
-    ui.printInfo();
+    with interface_lock:
+        interface.end_curses()
 
-    // Release UI
-    ui_mutex.unlock();
+    time.sleep(.1)
 
-    // Works till there are people alive
-    while (alive > 0)
-    {
-        // Acquire UI lock
-        ui_mutex.lock();
-        
-        // Refresh NCurses
-        ui.refreshDisplay();
+def population_thread():
+    global alive
+    while alive > 0:
+        time.sleep(2)
+        global population
+        currentPopulationSize = len(population) - 1
+        with population_lock:
+            for i in range(0, currentPopulationSize):
+                for j in range(0, currentPopulationSize):
+                    if population[i].gender != population[j].gender:
+                       if population[i].can_have_child & population[j].can_have_child:
+                           if random.randint(0, 100) < stats.BIRTH_RATIO_YEARLY:
+                                person = Person()
+                                person.init_random_person()
+                                population.append(person)
+                                t = threading.Thread(target=person_thread, args=[currentPopulationSize + 1, currentPopulationSize + 1])
+                                t.start()
+                                threads.append(t)
+                                break
+                if random.randint(0, 100) <= stats.ACCIDENT_RATIO:
+                    random_kill = random.randint(0, len(population))
+                    population[random_kill].alive = False
+                if alive == 1:
+                    alive = 0
+    time.sleep(1)
 
-        // Release lock
-        ui_mutex.unlock();
+def main():
 
-        // Sleep for one second
-        this_thread::sleep_for(chrono::milliseconds(1000));
-    }
+    for i in range(stats.STARTING_POPULATION_SIZE):
+        person = Person()
+        person.init_random_person()
+        population.append(person)
+        t = threading.Thread(target=person_thread, args=[population[i], i])
+        t.start()
+        threads.append(t)
 
-    // Lock UI
-    ui_mutex.lock();
+    add_to_population()
 
-    // Finalize Curses
-    ui.endCurses();
+    population_t = threading.Thread(target=population_thread)
+    population_t.start()
+    population_t.join()
 
-    // Unlock UI
-    ui_mutex.unlock();
+    interface_t = threading.Thread(target=interface_thread)
+    interface_t.start()
+    interface_t.join()
 
-    // Wait for some time before finishing thread
-    this_thread::sleep_for(chrono::milliseconds(100));
-}
+    for thread in threads:
+        thread.join()
 
-// Clear some stuff before finishing
-void finallize()
-{
 
-    // Wait for threads to finish execution
-    for (auto &thread : threads)
-    {
-        thread.join();
-    }
-
-    // Clear vectors
-    population.clear();
-    threads.clear();
-}
-
-// Entry point
-int main()
-{
-    // Create starting population
-    for (int i = 0; i < Statistics::startingPopulationSize; ++i)
-    {
-        // Create new person
-        Person person = Person();
-
-        // Initialize person with random data
-        person.initRandom();
-
-        // Place person inside population
-        population.emplace_back(person);
-    }
-
-    // Start thread for each person in population
-    for (int j = 0; j < population.size(); ++j)
-    {
-        // Start thread and place it into vector
-        threads.emplace_back(personThread, ref(population[j]), j);
-    }
-
-    // Start thread that causes population events
-    thread populationT = thread(populationThread);
-
-    // Start and join thread that controlls UI
-    thread uiT = thread(uiThread);
-    
-    // Join threads
-    populationT.join();
-    uiT.join();
-
-    finallize();
-    return 0;
-}
+main()
